@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo de Movimiento y CO₂</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            text-align: center;
+            background: #fff;
+            padding: 20px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .available {
+            color: green;
+            font-weight: bold;
+        }
+        .occupied {
+            color: red;
+            font-weight: bold;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .movement, .air {
+            margin-top: 20px;
+        }
+        .status {
+            font-size: 22px;
+        }
+        .value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #007BFF;
+        }
+        .timestamp {
+            font-size: 16px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Class Tracker</h1>
+        
+        <!-- Movimiento -->
+        <div class="movement">
+            <h2>Disponibilidad</h2>
+            <p id="movement-data">Cargando...</p>
+        </div>
+
+        <!-- CO2 -->
+        <div class="air">
+            <h2>Nivel de CO₂</h2>
+            <p id="air-data">Cargando...</p>
+        </div>
+    </div>
+
+    <script>
+        // URLs de las APIs
+        const movementApiUrl = "https://mvcexpress-lmxi.onrender.com/api/v2/movement?limit=1000";
+        const airApiUrl = "https://mvcexpress-lmxi.onrender.com/api/v1/air?limit=1000";
+
+        // Elementos donde se mostrarán los datos
+        const movementDataContainer = document.getElementById('movement-data');
+        const airDataContainer = document.getElementById('air-data');
+
+        // Función para cargar y mostrar el último movimiento
+        async function loadMostRecentMovement() {
+            try {
+                const response = await fetch(movementApiUrl);
+                if (!response.ok) {
+                    throw new Error(`Error en la solicitud: ${response.status}`);
+                }
+
+                const data = await response.json(); // Convertir la respuesta a JSON
+                const entries = data.data;
+
+                if (entries.length === 0) {
+                    movementDataContainer.textContent = "No hay datos disponibles";
+                    return;
+                }
+
+                // Obtener el último elemento del array
+                const sortedEntries = entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                const mostRecent = sortedEntries[0];
+
+                // Mostrar el último dato
+                movementDataContainer.innerHTML = `
+                    <p class= "status">Estado: ${mostRecent.detected === 0 ? '<span class="available">Disponible</span>' : '<span class="occupied">Ocupado</span>'}
+                    <p class= "timestamp">Fecha y hora: ${mostRecent.timestamp} <p>
+                `;
+            } catch (error) {
+                console.error("Error al cargar los datos:", error);
+                movementDataContainer.textContent = "Error al cargar el dato más reciente";
+            }
+        }
+
+        // Función para cargar y mostrar el último nivel de CO₂
+        async function loadMostRecentCO2() {
+            try {
+                const response = await fetch(airApiUrl);
+                if (!response.ok) {
+                    throw new Error(`Error en la solicitud: ${response.status}`);
+                }
+
+                const data = await response.json(); // Convertir la respuesta a JSON
+                const entries = data.data;
+
+                if (entries.length === 0) {
+                    airDataContainer.textContent = "No hay datos disponibles";
+                    return;
+                }
+
+                // Obtener el último elemento del array
+                const mostRecent = entries[entries.length - 1];
+
+                // Mostrar el último dato de CO₂
+                airDataContainer.innerHTML = `
+                    <p class="value">Nivel de CO₂: ${mostRecent.co2_level} ppm</p>
+                    <p class="timestamp">Fecha y hora: ${mostRecent.timestamp}</p>
+                `;
+            } catch (error) {
+                console.error("Error al cargar los datos de CO₂:", error);
+                airDataContainer.textContent = "Error al cargar el dato más reciente";
+            }
+        }
+
+        // Llamar a las funciones cada 5 segundos
+        setInterval(() => {
+            loadMostRecentMovement();
+            loadMostRecentCO2();
+        }, 5000);
+
+        // Llamar a las funciones inmediatamente al cargar la página
+        loadMostRecentMovement();
+        loadMostRecentCO2();
+    </script>
+</body>
+</html>
